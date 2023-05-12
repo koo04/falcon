@@ -1,8 +1,10 @@
 package falcon
 
 import (
+	"errors"
 	"fmt"
 	"log"
+	"sync"
 	"testing"
 )
 
@@ -52,7 +54,37 @@ func TestEngineQueue(t *testing.T) {
 
 	ev2 := &Event{ProcessId: "002"}
 	engine.Queue(ev2)
+}
 
+func TestEngineConfig(t *testing.T) {
+	wg := sync.WaitGroup{}
+
+	engine := NewEngine().WithMaxWorkers(5).WithConfig(&Config{
+		Job: func(w *Worker) error {
+			st, ok := w.GetState("message")
+			if !ok {
+				return errors.New("couldn't find state")
+			}
+			log.Println("job code from worker:", w.Id, "event:", st)
+			return nil
+		},
+		OnSuccess: func(w *Worker) {
+			wg.Done()
+
+			st, _ := w.GetState("message")
+			log.Println("success from worker:", w.Id, "event:", st)
+		},
+	}).Start()
+	defer engine.Close()
+
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+		ev := &Event{ProcessId: fmt.Sprintf("%03d", i)}
+		engine.Queue(ev)
+	}
+
+	log.Println("waiting for all jobs to finish")
+	wg.Wait()
 }
 
 func BenchmarkEngineQueue(b *testing.B) {

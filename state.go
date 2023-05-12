@@ -20,7 +20,7 @@ func (s *State[K, V]) Set(k K, v V) {
 }
 
 func (s *State[K, V]) Get(k K) (V, bool) {
-	s.mu.Lock()
+	s.mu.RLock()
 	defer s.mu.RUnlock()
 	val, ok := s.data[k]
 	return val, ok

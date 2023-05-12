@@ -2,10 +2,13 @@ package falcon
 
 import (
 	"context"
+	"log"
 )
 
 type Config struct {
-	Job func(*Worker) error
+	Job       func(*Worker) error
+	OnSuccess func(*Worker)
+	OnError   func(error, *Worker)
 }
 
 type Worker struct {
@@ -21,18 +24,31 @@ type Worker struct {
 	ctx   context.Context
 }
 
+var DefaultConfig = &Config{
+	Job: func(w *Worker) error {
+		log.Println("No Job Configured")
+		return nil
+	},
+	OnSuccess: func(w *Worker) { log.Println("No OnSuccess Configured") },
+	OnError:   func(err error, w *Worker) { log.Println("No OnError Configured") },
+}
+
 func NewWorker(e *Engine, id int, cfg ...*Config) *Worker {
 	w := &Worker{
 		Id:     id,
 		Status: "waiting",
+		Config: DefaultConfig,
 
 		state: NewState[string, any](),
 	}
 	if len(cfg) == 1 {
 		w.Config = cfg[0]
 	}
-
 	return w
+}
+
+func (w *Worker) GetState(state string) (any, bool) {
+	return w.state.Get(state)
 }
 
 func (w *Worker) Close() error {
@@ -59,7 +75,7 @@ func (w *Worker) work() {
 			// track of the worker status
 			done := make(chan bool)
 
-			go func() {
+			go func(w *Worker) {
 				defer func() {
 					w.Status = "waiting"
 					done <- true
@@ -75,10 +91,13 @@ func (w *Worker) work() {
 
 				if err := w.Job(w); err != nil {
 					// fmt.Println("on error:", err)
+					w.OnError(err, w)
+					return
 				}
 
 				// fmt.Println("on success:")
-			}()
+				w.OnSuccess(w)
+			}(w)
 
 			// wait for the job to finish
 			<-done

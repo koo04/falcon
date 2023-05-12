@@ -30,6 +30,7 @@ func NewEngine() *Engine {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	e := &Engine{
+		Config:  DefaultConfig,
 		workers: NewState[int, *Worker](),
 		msgch:   make(chan any),
 		workch:  make(chan any),
@@ -39,6 +40,11 @@ func NewEngine() *Engine {
 
 	go e.loop()
 
+	return e
+}
+
+func (e *Engine) WithConfig(cfg *Config) *Engine {
+	e.Config = cfg
 	return e
 }
 
@@ -61,7 +67,7 @@ func (e *Engine) Start() *Engine {
 	go func() {
 		// TODO: this should keep a minimum number of workers ready to work
 		for i := 0; i < e.MaxWorkers; i++ {
-			w := NewWorker(e, i)
+			w := NewWorker(e, i, e.Config)
 			e.Receive(w)
 		}
 	}()
