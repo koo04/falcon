@@ -45,6 +45,8 @@ func NewEngine() *Engine {
 }
 
 func (e *Engine) MarshalJSON() ([]byte, error) {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
 	output := struct {
 		MessagesProcessed int64                `json:"messages_processed"`
 		Workers           *State[int, *Worker] `json:"workers"`
