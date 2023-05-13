@@ -1,6 +1,9 @@
 package falcon
 
-import "sync"
+import (
+	"encoding/json"
+	"sync"
+)
 
 type State[K comparable, V any] struct {
 	mu   sync.RWMutex
@@ -49,7 +52,13 @@ func (s *State[K, V]) ForEach(f func(K, V)) {
 func (s *State[K, V]) Reset() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	for k, _ := range s.data {
+	for k := range s.data {
 		delete(s.data, k)
 	}
+}
+
+func (s *State[K, V]) MarshalJSON() ([]byte, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return json.Marshal(s.data)
 }

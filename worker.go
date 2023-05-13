@@ -2,7 +2,8 @@ package falcon
 
 import (
 	"context"
-	"log"
+	"encoding/json"
+	"sync"
 )
 
 type Config struct {
@@ -13,8 +14,7 @@ type Config struct {
 }
 
 type Worker struct {
-	Id     int    `json:"id"`
-	Status string `json:"status"`
+	Id int `json:"id"`
 
 	*Config `json:"-"`
 
@@ -23,25 +23,23 @@ type Worker struct {
 
 	queue chan any
 	ctx   context.Context
+	mu    sync.RWMutex
 }
 
 var DefaultConfig = &Config{
 	Before: func(w *Worker) error {
-		log.Println("No Before() configured")
 		return nil
 	},
 	Job: func(w *Worker) error {
-		log.Println("No Job() configured")
 		return nil
 	},
-	OnSuccess: func(w *Worker) { log.Println("No OnSuccess() configured") },
-	OnError:   func(err error, w *Worker) { log.Println("No OnError() configured") },
+	OnSuccess: func(w *Worker) {},
+	OnError:   func(err error, w *Worker) {},
 }
 
 func NewWorker(e *Engine, id int, cfg ...*Config) *Worker {
 	w := &Worker{
 		Id:     id,
-		Status: "waiting",
 		Config: DefaultConfig,
 
 		state: NewState[string, any](),
@@ -49,7 +47,15 @@ func NewWorker(e *Engine, id int, cfg ...*Config) *Worker {
 	if len(cfg) == 1 {
 		w.Config = cfg[0]
 	}
+	w.state.Set("status", "waiting")
 	return w
+}
+
+func (w *Worker) GetStatus() string {
+	if st, ok := w.GetState("status"); ok {
+		return st.(string)
+	}
+	return "unknown"
 }
 
 func (w *Worker) GetState(state string) (any, bool) {
@@ -66,8 +72,19 @@ func (w *Worker) Parent() *Engine {
 
 func (w *Worker) Close() error {
 	// fmt.Println("closing worker:", w.Id)
-	w.Status = "closed"
+	w.state.Set("status", "closed")
 	return nil
+}
+
+func (w *Worker) MarshalJSON() ([]byte, error) {
+	output := struct {
+		Id    int                 `json:"id"`
+		State *State[string, any] `json:"state"`
+	}{
+		Id:    w.Id,
+		State: w.state,
+	}
+	return json.Marshal(output)
 }
 
 func (w *Worker) work() {
@@ -75,7 +92,7 @@ func (w *Worker) work() {
 		select {
 		case <-w.ctx.Done():
 			// fmt.Println("context done; stop looking for work")
-			w.Status = "closing"
+			w.state.Set("status", "closing")
 			w.Close()
 			return
 		case msg := <-w.queue:
@@ -90,11 +107,11 @@ func (w *Worker) work() {
 
 			go func(w *Worker) {
 				defer func() {
-					w.Status = "waiting"
+					w.state.Set("status", "waiting")
 					done <- true
 				}()
 
-				w.Status = "processing"
+				w.state.Set("status", "processing")
 				w.state.Set("message", msg)
 
 				if w.Config == nil {
@@ -103,7 +120,7 @@ func (w *Worker) work() {
 				}
 
 				if w.Before != nil {
-					w.Status = "pre-processing"
+					w.state.Set("status", "pre-processing")
 					if err := w.Before(w); err != nil {
 						w.OnError(err, w)
 						return
@@ -117,7 +134,10 @@ func (w *Worker) work() {
 				}
 
 				// fmt.Println("on success:")
+				w.state.Set("status", "completed")
 				w.OnSuccess(w)
+
+				w.state.Reset()
 			}(w)
 
 			// wait for the job to finish

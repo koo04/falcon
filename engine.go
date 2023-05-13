@@ -2,6 +2,8 @@ package falcon
 
 import (
 	"context"
+	"encoding/json"
+	"log"
 	"sync"
 )
 
@@ -14,8 +16,8 @@ type Engine struct {
 	Config     *Config `json:"-"`
 
 	messagesProcessed int64
+	workers           *State[int, *Worker]
 
-	workers  *State[int, *Worker]
 	msgch    chan any
 	workch   chan any
 	ctx      context.Context
@@ -23,7 +25,7 @@ type Engine struct {
 	shutdown bool
 
 	// blah
-	mu sync.Mutex
+	mu sync.RWMutex
 }
 
 func NewEngine() *Engine {
@@ -41,6 +43,21 @@ func NewEngine() *Engine {
 	go e.loop()
 
 	return e
+}
+
+func (e *Engine) String() string {
+	output := struct {
+		MessagesProcessed int64                `json:"messages_processed"`
+		Workers           *State[int, *Worker] `json:"workers"`
+	}{
+		MessagesProcessed: e.messagesProcessed,
+		Workers:           e.workers,
+	}
+	b, err := json.Marshal(output)
+	if err != nil {
+		log.Println(err)
+	}
+	return string(b)
 }
 
 func (e *Engine) WithConfig(cfg *Config) *Engine {
@@ -82,6 +99,7 @@ func (e *Engine) Close() error {
 
 func (e *Engine) Queue(msg any) {
 	e.workch <- msg
+	e.messagesProcessed++
 }
 
 func (e *Engine) Receive(msg any) {

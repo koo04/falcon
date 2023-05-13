@@ -23,7 +23,7 @@ func TestEngine(t *testing.T) {
 
 	workers1 := engine.GetWorkers()
 	for w := range workers1 {
-		log.Println("1-worker: ", w.Id, w.Status)
+		log.Println("1-worker: ", w.Id, w.GetStatus())
 	}
 
 	engine.SetMaxWorkers(10)
@@ -36,7 +36,7 @@ func TestEngine(t *testing.T) {
 
 	workers2 := engine.GetWorkers()
 	for w := range workers2 {
-		log.Println("2-worker: ", w.Id, w.Status)
+		log.Println("2-worker: ", w.Id, w.GetStatus())
 	}
 }
 
@@ -46,7 +46,7 @@ func TestEngineQueue(t *testing.T) {
 
 	workers := engine.GetWorkers()
 	for w := range workers {
-		log.Println("q-worker: ", w.Id, w.Status)
+		log.Println("q-worker: ", w.Id, w.GetStatus())
 	}
 
 	ev := &Event{ProcessId: "001"}
@@ -98,9 +98,11 @@ func TestEngineConfig(t *testing.T) {
 		wg.Add(1)
 		ev := &Event{ProcessId: fmt.Sprintf("%03d", i)}
 		engine.Queue(ev)
+		log.Println(engine)
 	}
 
 	log.Println("waiting for all jobs to finish")
+	log.Println(engine)
 	wg.Wait()
 }
 
