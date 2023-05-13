@@ -6,6 +6,7 @@ import (
 )
 
 type Config struct {
+	Before    func(*Worker) error
 	Job       func(*Worker) error
 	OnSuccess func(*Worker)
 	OnError   func(error, *Worker)
@@ -25,12 +26,16 @@ type Worker struct {
 }
 
 var DefaultConfig = &Config{
-	Job: func(w *Worker) error {
-		log.Println("No Job Configured")
+	Before: func(w *Worker) error {
+		log.Println("No Before() configured")
 		return nil
 	},
-	OnSuccess: func(w *Worker) { log.Println("No OnSuccess Configured") },
-	OnError:   func(err error, w *Worker) { log.Println("No OnError Configured") },
+	Job: func(w *Worker) error {
+		log.Println("No Job() configured")
+		return nil
+	},
+	OnSuccess: func(w *Worker) { log.Println("No OnSuccess() configured") },
+	OnError:   func(err error, w *Worker) { log.Println("No OnError() configured") },
 }
 
 func NewWorker(e *Engine, id int, cfg ...*Config) *Worker {
@@ -49,6 +54,14 @@ func NewWorker(e *Engine, id int, cfg ...*Config) *Worker {
 
 func (w *Worker) GetState(state string) (any, bool) {
 	return w.state.Get(state)
+}
+
+func (w *Worker) SetState(state string, v any) {
+	w.state.Set(state, v)
+}
+
+func (w *Worker) Parent() *Engine {
+	return w.parent
 }
 
 func (w *Worker) Close() error {
@@ -87,6 +100,14 @@ func (w *Worker) work() {
 				if w.Config == nil {
 					// fmt.Println("no configured jobs")
 					return
+				}
+
+				if w.Before != nil {
+					w.Status = "pre-processing"
+					if err := w.Before(w); err != nil {
+						w.OnError(err, w)
+						return
+					}
 				}
 
 				if err := w.Job(w); err != nil {

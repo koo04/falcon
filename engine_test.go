@@ -60,6 +60,23 @@ func TestEngineConfig(t *testing.T) {
 	wg := sync.WaitGroup{}
 
 	engine := NewEngine().WithMaxWorkers(5).WithConfig(&Config{
+		Before: func(w *Worker) error {
+			workers := w.Parent().GetWorkers()
+			for pw := range workers {
+				if w.Id == pw.Id {
+					continue
+				}
+
+				state, ok := w.GetState("message")
+				if !ok {
+					return errors.New("no message state")
+				}
+				event := state.(*Event)
+
+				log.Println("before worker:", w.Id, "compare:", pw.Id, "process:", event.ProcessId)
+			}
+			return nil
+		},
 		Job: func(w *Worker) error {
 			st, ok := w.GetState("message")
 			if !ok {
