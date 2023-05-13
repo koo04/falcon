@@ -114,12 +114,12 @@ func TestEngineConfig(t *testing.T) {
 			go func() {
 				for i := 0; i < 5; i++ {
 					counter.Increment()
-					// w.SetState("counter", counter)
 					time.Sleep(time.Second)
 				}
 			}()
 
 			time.Sleep(time.Duration(rand.Intn(10)) * time.Second)
+			log.Println(w)
 			return nil
 		},
 		OnSuccess: func(w *Worker) {

@@ -91,6 +91,11 @@ func (w *Worker) MarshalJSON() ([]byte, error) {
 	return json.Marshal(output)
 }
 
+func (w *Worker) String() string {
+	b, _ := json.Marshal(w)
+	return string(b)
+}
+
 func (w *Worker) work() {
 	for {
 		select {
