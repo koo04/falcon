@@ -50,7 +50,7 @@ func (e *Engine) String() string {
 		MessagesProcessed int64                `json:"messages_processed"`
 		Workers           *State[int, *Worker] `json:"workers"`
 	}{
-		MessagesProcessed: e.messagesProcessed,
+		MessagesProcessed: int64(e.GetProcessedCount()),
 		Workers:           e.workers,
 	}
 	b, err := json.Marshal(output)
@@ -99,7 +99,9 @@ func (e *Engine) Close() error {
 
 func (e *Engine) Queue(msg any) {
 	e.workch <- msg
+	e.mu.Lock()
 	e.messagesProcessed++
+	e.mu.Unlock()
 }
 
 func (e *Engine) Receive(msg any) {
@@ -120,6 +122,8 @@ func (e *Engine) GetWorkers() <-chan *Worker {
 }
 
 func (e *Engine) GetProcessedCount() int {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
 	return int(e.messagesProcessed)
 }
 

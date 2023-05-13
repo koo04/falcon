@@ -1,11 +1,14 @@
 package falcon
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
+	"math/rand"
 	"sync"
 	"testing"
+	"time"
 )
 
 type Event struct {
@@ -56,10 +59,31 @@ func TestEngineQueue(t *testing.T) {
 	engine.Queue(ev2)
 }
 
+type Count struct {
+	counter int
+	mu      sync.RWMutex
+}
+
+func (c *Count) Increment() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.counter++
+}
+func (c *Count) MarshalJSON() ([]byte, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	out := struct {
+		Count int `json:"count"`
+	}{
+		Count: c.counter,
+	}
+	return json.Marshal(out)
+}
+
 func TestEngineConfig(t *testing.T) {
 	wg := sync.WaitGroup{}
 
-	engine := NewEngine().WithMaxWorkers(5).WithConfig(&Config{
+	engine := NewEngine().WithMaxWorkers(3).WithConfig(&Config{
 		Before: func(w *Worker) error {
 			workers := w.Parent().GetWorkers()
 			for pw := range workers {
@@ -83,6 +107,19 @@ func TestEngineConfig(t *testing.T) {
 				return errors.New("couldn't find state")
 			}
 			log.Println("job code from worker:", w.Id, "event:", st)
+
+			counter := &Count{}
+			w.SetState("counter", counter)
+
+			go func() {
+				for i := 0; i < 5; i++ {
+					counter.Increment()
+					// w.SetState("counter", counter)
+					time.Sleep(time.Second)
+				}
+			}()
+
+			time.Sleep(time.Duration(rand.Intn(10)) * time.Second)
 			return nil
 		},
 		OnSuccess: func(w *Worker) {
@@ -94,16 +131,26 @@ func TestEngineConfig(t *testing.T) {
 	}).Start()
 	defer engine.Close()
 
-	for i := 0; i < 5; i++ {
+	go func() {
+		ticker := time.NewTicker(time.Second)
+		for {
+			select {
+			case <-ticker.C:
+				log.Println(engine)
+			}
+		}
+	}()
+
+	for i := 0; i < 10; i++ {
 		wg.Add(1)
 		ev := &Event{ProcessId: fmt.Sprintf("%03d", i)}
 		engine.Queue(ev)
-		log.Println(engine)
 	}
 
 	log.Println("waiting for all jobs to finish")
-	log.Println(engine)
 	wg.Wait()
+
+	log.Println(engine)
 }
 
 func BenchmarkEngineQueue(b *testing.B) {
