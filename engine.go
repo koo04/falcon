@@ -3,7 +3,6 @@ package falcon
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"sync"
 )
 
@@ -45,7 +44,7 @@ func NewEngine() *Engine {
 	return e
 }
 
-func (e *Engine) String() string {
+func (e *Engine) MarshalJSON() ([]byte, error) {
 	output := struct {
 		MessagesProcessed int64                `json:"messages_processed"`
 		Workers           *State[int, *Worker] `json:"workers"`
@@ -53,10 +52,11 @@ func (e *Engine) String() string {
 		MessagesProcessed: int64(e.GetProcessedCount()),
 		Workers:           e.workers,
 	}
-	b, err := json.Marshal(output)
-	if err != nil {
-		log.Println(err)
-	}
+	return json.Marshal(output)
+}
+
+func (e *Engine) String() string {
+	b, _ := json.Marshal(e)
 	return string(b)
 }
 

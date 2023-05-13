@@ -140,6 +140,7 @@ func TestEngineConfig(t *testing.T) {
 		wg.Add(1)
 		ev := &Event{ProcessId: fmt.Sprintf("%03d", i)}
 		engine.Queue(ev)
+		time.Sleep(time.Second)
 	}
 
 	log.Println("waiting for all jobs to finish")
