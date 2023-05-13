@@ -62,6 +62,10 @@ func (w *Worker) GetState(state string) (any, bool) {
 	return w.state.Get(state)
 }
 
+func (w *Worker) GetContext() context.Context {
+	return w.ctx
+}
+
 func (w *Worker) SetState(state string, v any) {
 	w.state.Set(state, v)
 }
