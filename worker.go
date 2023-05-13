@@ -81,6 +81,8 @@ func (w *Worker) Close() error {
 }
 
 func (w *Worker) MarshalJSON() ([]byte, error) {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
 	output := struct {
 		Id    int                 `json:"id"`
 		State *State[string, any] `json:"state"`

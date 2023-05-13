@@ -72,12 +72,7 @@ func (c *Count) Increment() {
 func (c *Count) MarshalJSON() ([]byte, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	out := struct {
-		Count int `json:"count"`
-	}{
-		Count: c.counter,
-	}
-	return json.Marshal(out)
+	return json.Marshal(c.counter)
 }
 
 func TestEngineConfig(t *testing.T) {
