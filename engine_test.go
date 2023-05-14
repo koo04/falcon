@@ -26,7 +26,7 @@ func TestEngine(t *testing.T) {
 
 	workers1 := engine.GetWorkers()
 	for w := range workers1 {
-		log.Println("1-worker: ", w.Id, w.GetStatus())
+		log.Println("1-worker: ", w.GetId(), w.GetStatus())
 	}
 
 	engine.SetMaxWorkers(10)
@@ -39,7 +39,7 @@ func TestEngine(t *testing.T) {
 
 	workers2 := engine.GetWorkers()
 	for w := range workers2 {
-		log.Println("2-worker: ", w.Id, w.GetStatus())
+		log.Println("2-worker: ", w.GetId(), w.GetStatus())
 	}
 }
 
@@ -49,7 +49,7 @@ func TestEngineQueue(t *testing.T) {
 
 	workers := engine.GetWorkers()
 	for w := range workers {
-		log.Println("q-worker: ", w.Id, w.GetStatus())
+		log.Println("q-worker: ", w.GetId(), w.GetStatus())
 	}
 
 	ev := &Event{ProcessId: "001"}
@@ -82,7 +82,7 @@ func TestEngineConfig(t *testing.T) {
 		Before: func(w *Worker) error {
 			workers := w.Parent().GetWorkers()
 			for pw := range workers {
-				if w.Id == pw.Id {
+				if w.GetId() == pw.GetId() {
 					continue
 				}
 
@@ -92,7 +92,7 @@ func TestEngineConfig(t *testing.T) {
 				}
 				event := state.(*Event)
 
-				log.Println("before worker:", w.Id, "compare:", pw.Id, "process:", event.ProcessId)
+				log.Println("before worker:", w.GetId(), "compare:", pw.GetId(), "process:", event.ProcessId)
 			}
 			return nil
 		},
@@ -101,7 +101,7 @@ func TestEngineConfig(t *testing.T) {
 			if !ok {
 				return errors.New("couldn't find state")
 			}
-			log.Println("job code from worker:", w.Id, "event:", st)
+			log.Println("job code from worker:", w.GetId(), "event:", st)
 
 			counter := &Count{}
 			w.SetState("counter", counter)
@@ -121,7 +121,7 @@ func TestEngineConfig(t *testing.T) {
 			wg.Done()
 
 			st, _ := w.GetState("message")
-			log.Println("success from worker:", w.Id, "event:", st)
+			log.Println("success from worker:", w.GetId(), "event:", st)
 		},
 	}).Start()
 	defer engine.Close()

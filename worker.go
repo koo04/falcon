@@ -14,10 +14,9 @@ type Config struct {
 }
 
 type Worker struct {
-	Id int `json:"id"`
-
 	*Config `json:"-"`
 
+	id     int
 	state  *State[string, any]
 	parent *Engine
 
@@ -39,9 +38,9 @@ var DefaultConfig = &Config{
 
 func NewWorker(e *Engine, id int, cfg ...*Config) *Worker {
 	w := &Worker{
-		Id:     id,
 		Config: DefaultConfig,
 
+		id:    id,
 		state: NewState[string, any](),
 	}
 	if len(cfg) == 1 {
@@ -49,6 +48,12 @@ func NewWorker(e *Engine, id int, cfg ...*Config) *Worker {
 	}
 	w.state.Set("status", "waiting")
 	return w
+}
+
+func (w *Worker) GetId() int {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+	return w.id
 }
 
 func (w *Worker) GetStatus() string {
@@ -87,7 +92,7 @@ func (w *Worker) MarshalJSON() ([]byte, error) {
 		Id    int                 `json:"id"`
 		State *State[string, any] `json:"state"`
 	}{
-		Id:    w.Id,
+		Id:    w.id,
 		State: w.state,
 	}
 	return json.Marshal(output)

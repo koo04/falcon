@@ -178,7 +178,7 @@ func (e *Engine) addWorker(w *Worker) {
 	w.queue = e.workch
 	w.parent = e
 
-	e.workers.Set(w.Id, w)
+	e.workers.Set(w.id, w)
 
 	// fmt.Println("adding worker: ", w.Id)
 	go w.work()
