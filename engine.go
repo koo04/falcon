@@ -11,8 +11,8 @@ type getWorkerChan chan *Worker
 type shutdown struct{}
 
 type Engine struct {
-	MaxWorkers int     `json:"max_workers"`
-	Config     *Config `json:"-"`
+	maxWorkers int     `json:"max_workers"`
+	config     *Config `json:"-"`
 
 	messagesProcessed int64
 	workers           *State[int, *Worker]
@@ -31,7 +31,7 @@ func NewEngine() *Engine {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	e := &Engine{
-		Config:  DefaultConfig,
+		config:  DefaultConfig,
 		workers: NewState[int, *Worker](),
 		msgch:   make(chan any),
 		workch:  make(chan any),
@@ -63,12 +63,12 @@ func (e *Engine) String() string {
 }
 
 func (e *Engine) WithConfig(cfg *Config) *Engine {
-	e.Config = cfg
+	e.config = cfg
 	return e
 }
 
 func (e *Engine) WithMaxWorkers(max int) *Engine {
-	e.MaxWorkers = max
+	e.maxWorkers = max
 	return e
 }
 
@@ -78,15 +78,15 @@ func (e *Engine) SetMaxWorkers(max int) {
 
 func (e *Engine) Start() *Engine {
 	// set default config
-	if e.Config == nil {
-		e.Config = &Config{}
+	if e.config == nil {
+		e.config = &Config{}
 	}
 
 	// start the pool
 	go func() {
 		// TODO: this should keep a minimum number of workers ready to work
-		for i := 0; i < e.MaxWorkers; i++ {
-			w := NewWorker(e, i, e.Config)
+		for i := 0; i < e.maxWorkers; i++ {
+			w := NewWorker(e, i, e.config)
 			e.Receive(w)
 		}
 	}()
@@ -166,11 +166,13 @@ func (e *Engine) handleGetWorkers(out getWorkerChan) {
 }
 
 func (e *Engine) updateMaxWorkers(max int) {
-	e.MaxWorkers = max
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.maxWorkers = max
 }
 
 func (e *Engine) addWorker(w *Worker) {
-	if e.workers.Len() >= e.MaxWorkers {
+	if e.workers.Len() >= e.maxWorkers {
 		return
 	}
 
