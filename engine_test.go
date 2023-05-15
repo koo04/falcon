@@ -81,7 +81,12 @@ func TestEngineConfigError(t *testing.T) {
 	engine := NewEngine().WithMaxWorkers(3).WithConfig(&Config{
 		Before: func(w *Worker) error {
 			time.Sleep(time.Second)
-			return errors.New("testing before failure")
+			workers := w.Parent().GetWorkers()
+			for w := range workers {
+				_ = w
+				return errors.New("failed before check")
+			}
+			return nil
 		},
 		OnError: func(err error, w *Worker) {
 			wg.Done()

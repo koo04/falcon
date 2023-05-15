@@ -116,7 +116,7 @@ func (e *Engine) Receive(msg any) {
 }
 
 func (e *Engine) GetWorkers() <-chan *Worker {
-	out := make(chan *Worker)
+	out := make(chan *Worker, e.workers.Len())
 
 	go e.Receive(getWorkerChan(out))
 
