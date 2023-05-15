@@ -123,6 +123,7 @@ func (w *Worker) work() {
 
 			go func(w *Worker) {
 				defer func() {
+					w.state.Reset()
 					w.state.Set("status", "waiting")
 					done <- true
 				}()
@@ -153,8 +154,6 @@ func (w *Worker) work() {
 				// fmt.Println("on success:")
 				w.state.Set("status", "completed")
 				w.OnSuccess(w)
-
-				w.state.Reset()
 			}(w)
 
 			// wait for the job to finish

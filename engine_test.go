@@ -75,6 +75,44 @@ func (c *Count) MarshalJSON() ([]byte, error) {
 	return json.Marshal(c.counter)
 }
 
+func TestEngineConfigError(t *testing.T) {
+	wg := sync.WaitGroup{}
+
+	engine := NewEngine().WithMaxWorkers(3).WithConfig(&Config{
+		Before: func(w *Worker) error {
+			time.Sleep(time.Second)
+			return errors.New("testing before failure")
+		},
+		OnError: func(err error, w *Worker) {
+			wg.Done()
+			log.Println("incoming error:", err)
+		},
+	}).Start()
+	defer engine.Close()
+
+	go func() {
+		ticker := time.NewTicker(time.Second)
+		for {
+			select {
+			case <-ticker.C:
+				log.Println(engine)
+			}
+		}
+	}()
+
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		ev := &Event{ProcessId: fmt.Sprintf("%03d", i)}
+		engine.Queue(ev)
+		time.Sleep(time.Second)
+	}
+
+	log.Println("waiting for all jobs to finish")
+	wg.Wait()
+
+	log.Println(engine)
+}
+
 func TestEngineConfig(t *testing.T) {
 	wg := sync.WaitGroup{}
 
