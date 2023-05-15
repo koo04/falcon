@@ -127,7 +127,6 @@ func (w *Worker) work() {
 					done <- true
 				}()
 
-				w.state.Set("status", "processing")
 				w.state.Set("message", msg)
 
 				if w.Config == nil {
@@ -138,13 +137,15 @@ func (w *Worker) work() {
 				if w.Before != nil {
 					w.state.Set("status", "pre-processing")
 					if err := w.Before(w); err != nil {
+						w.state.Set("status", "error")
 						w.OnError(err, w)
 						return
 					}
 				}
 
+				w.state.Set("status", "processing")
 				if err := w.Job(w); err != nil {
-					// fmt.Println("on error:", err)
+					w.state.Set("status", "error")
 					w.OnError(err, w)
 					return
 				}

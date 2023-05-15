@@ -11,7 +11,7 @@ type getWorkerChan chan *Worker
 type shutdown struct{}
 
 type Engine struct {
-	maxWorkers int     `json:"max_workers"`
+	maxWorkers int
 	config     *Config `json:"-"`
 
 	messagesProcessed int64
@@ -180,7 +180,7 @@ func (e *Engine) addWorker(w *Worker) {
 	w.queue = e.workch
 	w.parent = e
 
-	e.workers.Set(w.id, w)
+	e.workers.Set(w.GetId(), w)
 
 	// fmt.Println("adding worker: ", w.Id)
 	go w.work()
