@@ -91,6 +91,7 @@ func TestEngineConfigError(t *testing.T) {
 		OnError: func(err error, w *Worker) {
 			wg.Done()
 			log.Println("incoming error:", err)
+			log.Println("worker: ", w.String())
 		},
 	}).Start()
 	defer engine.Close()
@@ -165,6 +166,7 @@ func TestEngineConfig(t *testing.T) {
 
 			st, _ := w.GetState("message")
 			log.Println("success from worker:", w.GetId(), "event:", st)
+			log.Println("worker: ", w.String())
 		},
 	}).Start()
 	defer engine.Close()

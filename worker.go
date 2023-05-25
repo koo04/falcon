@@ -7,10 +7,11 @@ import (
 )
 
 type Config struct {
-	Before    func(*Worker) error
-	Job       func(*Worker) error
-	OnSuccess func(*Worker)
-	OnError   func(error, *Worker)
+	Before     func(*Worker) error
+	Job        func(*Worker) error
+	OnSuccess  func(*Worker)
+	OnError    func(error, *Worker)
+	OnComplete func(*Worker)
 }
 
 type Worker struct {
@@ -32,8 +33,9 @@ var DefaultConfig = &Config{
 	Job: func(w *Worker) error {
 		return nil
 	},
-	OnSuccess: func(w *Worker) {},
-	OnError:   func(err error, w *Worker) {},
+	OnSuccess:  func(w *Worker) {},
+	OnError:    func(err error, w *Worker) {},
+	OnComplete: func(w *Worker) {},
 }
 
 func NewWorker(e *Engine, id int, cfg ...*Config) *Worker {
@@ -123,6 +125,9 @@ func (w *Worker) work() {
 
 			go func(w *Worker) {
 				defer func() {
+					if w.OnComplete != nil {
+						w.OnComplete(w)
+					}
 					w.state.Reset()
 					w.state.Set("status", "waiting")
 					done <- true
@@ -152,7 +157,7 @@ func (w *Worker) work() {
 				}
 
 				// fmt.Println("on success:")
-				w.state.Set("status", "completed")
+				w.state.Set("status", "success")
 				w.OnSuccess(w)
 			}(w)
 
