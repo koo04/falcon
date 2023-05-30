@@ -15,6 +15,17 @@ type Event struct {
 	ProcessId string `json:"process_id"`
 }
 
+func TestState(t *testing.T) {
+	state := NewState[string, any]()
+	state.Set("foo", "bar")
+
+	substate := NewState[string, any]()
+	state.Set("sub", substate)
+	substate.Set("baz", "boo")
+
+	log.Println(state.String())
+}
+
 func TestEngine(t *testing.T) {
 	engine := NewEngine().WithMaxWorkers(5)
 	defer engine.Close()

@@ -62,3 +62,8 @@ func (s *State[K, V]) MarshalJSON() ([]byte, error) {
 	defer s.mu.RUnlock()
 	return json.Marshal(s.data)
 }
+
+func (s *State[K, V]) String() string {
+	b, _ := s.MarshalJSON()
+	return string(b)
+}
