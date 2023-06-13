@@ -26,6 +26,19 @@ type Worker struct {
 	mu    sync.RWMutex
 }
 
+type WorkerStatus string
+
+var (
+	WorkerStatusUnknown       WorkerStatus = "unknown"
+	WorkerStatusWaiting       WorkerStatus = "waiting"
+	WorkerStatusPreProcessing WorkerStatus = "pre-processing"
+	WorkerStatusProcessing    WorkerStatus = "processing"
+	WorkerStatusSuccess       WorkerStatus = "success"
+	WorkerStatusClosing       WorkerStatus = "closing"
+	WorkerStatusClosed        WorkerStatus = "closed"
+	WorkerStatusError         WorkerStatus = "error"
+)
+
 var DefaultConfig = &Config{
 	Before: func(w *Worker) error {
 		return nil
@@ -48,7 +61,7 @@ func NewWorker(e *Engine, id int, cfg ...*Config) *Worker {
 	if len(cfg) == 1 {
 		w.Config = cfg[0]
 	}
-	w.state.Set("status", "waiting")
+	w.state.Set("status", WorkerStatusWaiting)
 	return w
 }
 
@@ -58,11 +71,11 @@ func (w *Worker) GetId() int {
 	return w.id
 }
 
-func (w *Worker) GetStatus() string {
+func (w *Worker) GetStatus() WorkerStatus {
 	if st, ok := w.GetState("status"); ok {
-		return st.(string)
+		return st.(WorkerStatus)
 	}
-	return "unknown"
+	return WorkerStatusUnknown
 }
 
 func (w *Worker) GetState(state string) (any, bool) {
@@ -82,8 +95,7 @@ func (w *Worker) Parent() *Engine {
 }
 
 func (w *Worker) Close() error {
-	// fmt.Println("closing worker:", w.Id)
-	w.state.Set("status", "closed")
+	w.state.Set("status", WorkerStatusClosed)
 	return nil
 }
 
@@ -109,8 +121,7 @@ func (w *Worker) work() {
 	for {
 		select {
 		case <-w.ctx.Done():
-			// fmt.Println("context done; stop looking for work")
-			w.state.Set("status", "closing")
+			w.state.Set("status", WorkerStatusClosing)
 			w.Close()
 			return
 		case msg := <-w.queue:
@@ -129,7 +140,7 @@ func (w *Worker) work() {
 						w.OnComplete(w)
 					}
 					w.state.Reset()
-					w.state.Set("status", "waiting")
+					w.state.Set("status", WorkerStatusWaiting)
 					done <- true
 				}()
 
@@ -141,23 +152,23 @@ func (w *Worker) work() {
 				}
 
 				if w.Before != nil {
-					w.state.Set("status", "pre-processing")
+					w.state.Set("status", WorkerStatusPreProcessing)
 					if err := w.Before(w); err != nil {
-						w.state.Set("status", "error")
+						w.state.Set("status", WorkerStatusError)
 						w.OnError(err, w)
 						return
 					}
 				}
 
-				w.state.Set("status", "processing")
+				w.state.Set("status", WorkerStatusProcessing)
 				if err := w.Job(w); err != nil {
-					w.state.Set("status", "error")
+					w.state.Set("status", WorkerStatusError)
 					w.OnError(err, w)
 					return
 				}
 
 				// fmt.Println("on success:")
-				w.state.Set("status", "success")
+				w.state.Set("status", WorkerStatusSuccess)
 				w.OnSuccess(w)
 			}(w)
 
