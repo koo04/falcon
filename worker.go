@@ -3,6 +3,7 @@ package falcon
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"sync"
 )
 
@@ -136,6 +137,9 @@ func (w *Worker) work() {
 
 			go func(w *Worker) {
 				defer func() {
+					if r := recover(); r != nil {
+						w.OnError(fmt.Errorf("%v", r), w)
+					}
 					if w.OnComplete != nil {
 						w.OnComplete(w)
 					}
