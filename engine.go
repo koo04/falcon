@@ -83,13 +83,11 @@ func (e *Engine) Start() *Engine {
 	}
 
 	// start the pool
-	go func() {
-		// TODO: this should keep a minimum number of workers ready to work
-		for i := 0; i < e.maxWorkers; i++ {
-			w := NewWorker(e, i, e.config)
-			e.Receive(w)
-		}
-	}()
+	// TODO: this should keep a minimum number of workers ready to work
+	for i := 0; i < e.maxWorkers; i++ {
+		w := NewWorker(e, i, e.config)
+		e.Receive(w)
+	}
 
 	return e
 }
