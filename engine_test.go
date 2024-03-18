@@ -109,11 +109,9 @@ func TestEngineConfigError(t *testing.T) {
 
 	go func() {
 		ticker := time.NewTicker(time.Second)
-		for {
-			select {
-			case <-ticker.C:
-				log.Println(engine)
-			}
+		defer ticker.Stop()
+		for range ticker.C {
+			log.Println(engine)
 		}
 	}()
 
@@ -184,11 +182,8 @@ func TestEngineConfig(t *testing.T) {
 
 	go func() {
 		ticker := time.NewTicker(time.Second)
-		for {
-			select {
-			case <-ticker.C:
-				log.Println(engine)
-			}
+		for range ticker.C {
+			log.Println(engine)
 		}
 	}()
 
