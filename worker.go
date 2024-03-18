@@ -151,7 +151,7 @@ func (w *Worker) work() {
 				w.state.Set("message", msg)
 
 				if w.Config == nil {
-					// fmt.Println("no configured jobs")
+					w.OnError(fmt.Errorf("config is nil"), w)
 					return
 				}
 
@@ -171,7 +171,6 @@ func (w *Worker) work() {
 					return
 				}
 
-				// fmt.Println("on success:")
 				w.state.Set("status", WorkerStatusSuccess)
 				w.OnSuccess(w)
 			}(w)

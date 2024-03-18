@@ -180,6 +180,5 @@ func (e *Engine) addWorker(w *Worker) {
 
 	e.workers.Set(w.GetId(), w)
 
-	// fmt.Println("adding worker: ", w.Id)
 	go w.work()
 }
