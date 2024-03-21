@@ -87,6 +87,10 @@ func (w *Worker) GetContext() context.Context {
 	return w.ctx
 }
 
+func (w *Worker) SetContext(ctx context.Context) {
+	w.ctx = ctx
+}
+
 func (w *Worker) SetState(state string, v any) {
 	w.state.Set(state, v)
 }
